@@ -9,9 +9,9 @@ class App extends Component {
     };
 
     return (
-      <Grid style={gridPaddingStyle}>
+      <div style={gridPaddingStyle}>
         <StockTracker/>
-      </Grid>
+      </div>
     );
   }
 }

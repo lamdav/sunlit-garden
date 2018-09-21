@@ -97,8 +97,7 @@ app.get("/stock/daily", symbolValidations.concat(intervalValidations), (request,
   const queryParams = {
     function: "TIME_SERIES_INTRADAY",
     symbol,
-    interval,
-    outputsize: "full"
+    interval
   };
   const params = Object.assign(baseParams, queryParams);
   const config = {params};
