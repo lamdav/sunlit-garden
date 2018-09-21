@@ -1,9 +1,8 @@
 import React, { Component } from "react";
-import { Button, Grid, Input, Statistic, Segment, Message, Dropdown } from "semantic-ui-react";
-import { FlexibleXYPlot, LineSeries, XAxis, YAxis } from "react-vis";
+import { Button, Grid, Input, Statistic, Segment, Message, Dropdown, Header } from "semantic-ui-react";
+import { FlexibleXYPlot, LineSeries, XAxis, YAxis, Crosshair, LineMarkSeries } from "react-vis";
 
 import "../../../node_modules/react-vis/dist/style.css";
-
 
 import StockService from "./StockService";
 
@@ -14,7 +13,8 @@ class StockTracker extends Component {
     this.service = new StockService();
     this.state = {
       symbol: "",
-      interval: "1min",
+      interval: "15min",
+      priceCrossHair: [],
       data: null,
       error: null,
       plot: null
@@ -22,6 +22,7 @@ class StockTracker extends Component {
 
     this.onInputChange = this.onInputChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleServerError = this.handleServerError.bind(this);
     this.onDropdownChange = this.onDropdownChange.bind(this);
   }
 
@@ -45,17 +46,7 @@ class StockTracker extends Component {
         }
         this.setState({error, data}); 
       })
-      .catch((error) => {
-        const responseError = error.response.data.errors;
-        const errorComponents = responseError.map((error, index) => {
-          return (
-            <Message error
-                     content={error.msg}
-                     key={index + " " + error.msg}/>
-          );
-        });
-        this.setState({error: errorComponents});
-      });
+      .catch(this.handleServerError);
     this.service.daily(this.state.symbol, this.state.interval)
       .then((response) => response.data)
       .then((stockData) => {
@@ -63,22 +54,21 @@ class StockTracker extends Component {
         const timeseries = stockData[`Time Series (${this.state.interval})`];
         const times = Object.keys(timeseries);
         const plotData = times.map((time) => Object.assign({}, {x: new Date(time), y: parseFloat(timeseries[time]["4. close"])}));
-
-        const plotComponent = (
-          <Segment>
-            <FlexibleXYPlot xType="time"
-                            height={600}>
-              <XAxis title="Time"/>
-              <YAxis title="Price"/>
-              <LineSeries data={plotData}
-                          curve="curveBasis"/>
-            </FlexibleXYPlot>
-          </Segment>
-        );
-
-        this.setState({plot: plotComponent});
+        this.setState({plotData});
       })
-      .catch((error) => console.log(error));
+      .catch(this.handleServerError);
+  }
+
+  handleServerError(error) {
+    const responseError = error.response.data.errors;
+    const errorComponents = responseError.map((error, index) => {
+      return (
+        <Message error
+                  content={error.msg}
+                  key={index + " " + error.msg}/>
+      );
+    });
+    this.setState({error: errorComponents});
   }
 
   onDropdownChange(event, {value}) {
@@ -103,7 +93,10 @@ class StockTracker extends Component {
 
       content = (
         <Segment>
-          <Statistic.Group horizontal>
+          <Header content={this.state.symbol.toUpperCase()}
+                  size="huge"/>
+          <Statistic.Group horizontal
+                           size="huge">
             <Statistic horizontal
                        label="open"
                        value={`$${open.substring(0, open.length - 2)}`}/>
@@ -114,6 +107,32 @@ class StockTracker extends Component {
                        label="low"
                        value={`$${low.substring(0, low.length - 2)}`}/>
           </Statistic.Group>
+        </Segment>
+      );
+    }
+    let plotComponent = null;
+    if (this.state.plotData) {
+      plotComponent = (
+        <Segment>
+          <FlexibleXYPlot xType="time"
+                          height={600}
+                          onMouseLeave={() => this.setState({priceCrossHair: []})}>
+            <XAxis title="Time"/>
+            <YAxis title="Price"/>
+            <LineMarkSeries data={this.state.plotData}
+                            curve="curveBasic"
+                            onNearestXY={(value, {index}) => this.setState({priceCrossHair: [this.state.plotData[index]]})}/>
+            <Crosshair values={this.state.priceCrossHair}>
+              {this.state.priceCrossHair.length > 0
+                ? (
+                  <Segment inverted>
+                    <Header size="small" content={"time: " + this.state.priceCrossHair[0].x.toString()}/>
+                    <Header size="small" content={"price: " + this.state.priceCrossHair[0].y.toString()}/>
+                  </Segment>
+                )
+                : null}
+            </Crosshair>
+          </FlexibleXYPlot>
         </Segment>
       );
     }
@@ -142,16 +161,9 @@ class StockTracker extends Component {
           </Segment.Group>
         </Grid.Column>
 
-        {this.state.plot  
-          ? (
-            <Grid.Column>
-              <Segment.Group>
-                {this.state.plot}     
-              </Segment.Group>
-            </Grid.Column>
-          )
-          : null 
-        }
+        {plotComponent
+          ? <Grid.Column> {plotComponent} </Grid.Column>
+          : null}
       </Grid.Row>
     );
   }
