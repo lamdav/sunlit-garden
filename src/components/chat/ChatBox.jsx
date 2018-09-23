@@ -62,7 +62,7 @@ class ChatBox extends Component {
 
   makeMessage(message, index) {
     return (
-      <Card key={message.timestamp}
+      <Card key={`${index} ${message.timestamp}`}
             header={message.author}
             meta={new Date(message.timestamp).toTimeString()}
             description={message.data}/>
