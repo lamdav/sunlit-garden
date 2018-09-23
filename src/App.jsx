@@ -46,7 +46,7 @@ class App extends Component {
         </Menu>
         <Sidebar.Pusher onClick={this.hideChat}
                         style={pusherStyle}>
-          {/* <StockTracker/> */}
+          <StockTracker/>
         </Sidebar.Pusher>
       </Sidebar.Pushable>
     );
