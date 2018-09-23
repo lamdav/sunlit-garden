@@ -15,7 +15,7 @@ a way to perhaps centralize IoT data collected from various sources.
 ## Features
 - [x] Current Day Stock Price Query
 - [x] Stock Price Graph
-- [ ] Persist Tracking Stock Symbols ?
+- [x] Persist Tracking Stock Symbols
 - [ ] Private Group Messaging ?
   - [ ] Index Links shared ?
   - [ ] Index Image shared (via Tags?)

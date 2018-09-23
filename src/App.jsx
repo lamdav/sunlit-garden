@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import StockTracker from "./components/stocks/StockTracker";
 import { Sidebar, Menu, Segment } from "semantic-ui-react";
+import ChatBox from "./components/chat/ChatBox";
 
 class App extends Component {
   constructor(props) {
@@ -34,15 +35,7 @@ class App extends Component {
 
     return (
       <Sidebar.Pushable>
-        <Sidebar as={Segment.Group} 
-                 animation="push"
-                 visible={this.state.sidebarVisible}
-                 direction="right"
-                 width="very wide">
-          <Segment inverted>
-            Hello World
-          </Segment>
-        </Sidebar>
+        <ChatBox visible={this.state.sidebarVisible}/>
         
         <Menu borderless
               style={menuStyle}>
@@ -53,7 +46,7 @@ class App extends Component {
         </Menu>
         <Sidebar.Pusher onClick={this.hideChat}
                         style={pusherStyle}>
-          <StockTracker/>
+          {/* <StockTracker/> */}
         </Sidebar.Pusher>
       </Sidebar.Pushable>
     );

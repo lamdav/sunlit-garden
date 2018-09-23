@@ -18,7 +18,8 @@
     "react-scripts": "1.1.5",
     "react-vis": "^1.11.1",
     "request": "^2.88.0",
-    "semantic-ui-react": "^0.82.5"
+    "semantic-ui-react": "^0.82.5",
+    "socket.io": "^2.1.1"
   },
   "scripts": {
     "start": "react-scripts start",

@@ -10,6 +10,8 @@ const { query, validationResult } = require("express-validator/check");
 const { sanitizeQuery } = require("express-validator/filter");
 const firebase = require("firebase");
 const pThrottle = require("p-throttle");
+const socket = require("socket.io");
+const http = require("http");
 
 firebase.initializeApp({
     apiKey: process.env.FIREBASE_API_KEY,
@@ -25,6 +27,8 @@ db.settings({
 });
 
 const app = express();
+const server = http.Server(app);
+const io = socket(server);
 
 app.set("host", process.env.HOST || "localhost");
 app.set("port", process.env.PORT || 8080);
@@ -43,7 +47,7 @@ app.all("*", (request, response, next) => {
   request.header("Accept", "application/json");
   request.header("Accept-Language", "en-US");
 
-  console.log(`${request.method} ${request.originalUrl} hit with ${JSON.stringify(request.query)}`);
+  console.log(`${request.method} ${request.originalUrl} hit with: query => ${JSON.stringify(request.query)} body => ${JSON.stringify(request.body)}`);
 
   next();
 });
@@ -166,10 +170,67 @@ app.post("/stock/track", symbolValidations.concat(intervalValidations), (request
     });
 });
 
+const timestampValidation = [
+  query("timestamp")
+    .exists()
+    .withMessage("timestamp was not provided")
+    .isInt()
+    .withMessage("timestamp is not an integer"),
+  sanitizeQuery("timestamp")
+    .customSanitizer((timestamp) => parseInt(timestamp))
+];
+app.get("/chat/messages", timestampValidation, (request, response) => {
+  const errors = validationResult(request);
+  if (!errors.isEmpty()) {
+    return response.status(404)
+      .json({ errors: errors.array() });
+  }
+  
+  const beforeThisTime = request.query.timestamp;
+  db.collection("messages")
+    .where("timestamp", "<=", beforeThisTime)
+    .orderBy("timestamp", "desc")
+    .limit(10)
+    .get()
+    .then((querySnapshot) => querySnapshot.docs.map((queryDocSnapshot) => queryDocSnapshot.data()))
+    .then((data) => response.status(200).send(data));
+})
+
+io.on("connection", (sock) => {
+  console.log("connection event");
+
+  sock.on("publish", (message) => {
+    console.log(`received message: ${JSON.stringify(message)}`);
+    const timestampedMessage = Object.assign(message, {timestamp: Date.now()})
+    db.collection("messages")
+      .add(timestampedMessage)
+      .then((doc) => console.log(`added message: ${JSON.stringify(message)}`))
+      .catch((error) => console.log(`failed to add message ${JSON.stringify(message)}: ${error}`));
+  });
+});
+
+io.on("disconnection", () => {
+  console.log("disconnect event");
+});
+
+/**
+ * Emit all new messages onto the messages event key.
+ */
+db.collection("messages")
+  .onSnapshot((querySnapshot) => {
+    querySnapshot.docChanges().forEach((change) => {
+      if (change.type === "added") {
+        io.emit("messages", change.doc.data());
+      }
+    });
+  });
+  
+
 if (process.env.NODE_ENV !== "production") {
   app.use(errorhandler());
 }
 
+server.listen(8081);
 app.listen(app.get("port"), (error) => {
   if (error) {
     console.log(`Server failed to start: ${error}`);
