@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import { Grid } from "semantic-ui-react";
 import StockTracker from "./components/stocks/StockTracker";
 
 class App extends Component {

@@ -13,7 +13,7 @@ class StockService {
         symbol
       }
     };
-    return this.service("/stock/basic", config);
+    return this.service.get("/stock/basic", config);
   }
 
   daily(symbol, interval) {
@@ -23,7 +23,22 @@ class StockService {
         interval
       }
     };
-    return this.service("/stock/daily", config);
+    return this.service.get("/stock/daily", config);
+  }
+
+  track() {
+    return this.service.get("/stock/track");
+  }
+
+  addTrack(symbol, interval) {
+    const config = {
+      params: {
+        symbol,
+        interval
+      }
+    };
+    console.log(config);
+    return this.service.post("/stock/track", null, config);
   }
 }
 

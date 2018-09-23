@@ -1,10 +1,9 @@
 import React, { Component } from "react";
-import { Button, Grid, Input, Segment, Message, Dropdown, GridRow } from "semantic-ui-react";
+import { Button, Dropdown, Grid, Input, Message, Segment } from "semantic-ui-react";
 
 import StockService from "./StockService";
-import StockPlot from "./StockPlot";
-import StockStats from "./StockStats";
 import StockErrorFeed from "./StockErrorFeed";
+import StockVisual from "./StockVisual";
 
 class StockTracker extends Component {
   constructor(props) {
@@ -18,7 +17,8 @@ class StockTracker extends Component {
       data: null,
       quoteErrors: [],
       dailyErrors: [],
-      plot: null
+      plotData: null,
+      trackings: []
     };
 
     this.dropdownOptions = [
@@ -33,6 +33,37 @@ class StockTracker extends Component {
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleServerError = this.handleServerError.bind(this);
     this.onDropdownChange = this.onDropdownChange.bind(this);
+    this.createTrackingVisual = this.createTrackingVisual.bind(this);
+    this.extractPlotData = this.extractPlotData.bind(this);
+    this.addStock = this.addStock.bind(this);
+  }
+
+  componentDidMount() {
+    this.service.track()
+      .then((response) => response.data)
+      .then((trackings) => {
+        return Promise.all(trackings.map((tracking) => {
+          const symbolPromise = Promise.resolve(tracking.symbol);
+          const quotePromise = this.service.quote(tracking.symbol)
+          const dailyPromise = this.service.daily(tracking.symbol, tracking.interval)
+          return Promise.all([symbolPromise, quotePromise, dailyPromise])
+        }));
+      })
+      .then((data) => {
+        return data.map((datum) => {
+          let symbol, quoteData, dailyData;
+          [symbol, quoteData, dailyData] = datum;
+          return {
+            symbol,
+            quoteData: quoteData.data["Global Quote"], 
+            dailyData: this.extractPlotData(dailyData.data)
+          };          
+        });
+      })
+      .then((data) => {
+        console.log(data);
+        this.setState({trackings: data});
+      });
   }
 
   onInputChange(event, {value}) {
@@ -68,29 +99,64 @@ class StockTracker extends Component {
           this.setState({dailyError: [dailyErrors]});
           return;
         }
-        const timeseries = stockData[`Time Series (${this.state.interval})`];
-        const times = Object.keys(timeseries);
-        const plotData = times.map((time) => Object.assign({}, {x: new Date(time), y: parseFloat(timeseries[time]["4. close"])}));
+        const plotData = this.extractPlotData(stockData);
         this.setState({dailyError: [], plotData});
       })
       .catch(this.handleServerError);
   }
 
+  extractPlotData(stockData) {
+    if (stockData["Information"]) {
+      this.setState({error: <Message error content={stockData["Information"]}/>});
+      return [];
+    }
+    const timeseriesKeyCandidates = Object.keys(stockData).filter((key) => key.startsWith("Time Series"));
+    if (timeseriesKeyCandidates.length === 0) {
+      return [];
+    }
+    let timeseriesKey, rest;
+    [timeseriesKey, rest] = timeseriesKeyCandidates
+    const timeseries = stockData[timeseriesKey];
+    const times = Object.keys(timeseries);
+    return times.map((time) => Object.assign({}, {x: new Date(time), y: parseFloat(timeseries[time]["4. close"])}));
+  }
+
   handleServerError(error) {
     console.log(error);
-    const responseError = error.response.data.errors;
-    const errorComponents = responseError.map((error, index) => {
-      return (
-        <Message error
-                 content={error.msg}
-                 key={index + " " + error.msg}/>
-      );
-    });
-    this.setState({error: errorComponents});
+    if (error.response && error.data && error.data.errors) {
+      const responseError = error.response.data.errors;
+      const errorComponents = responseError.map((error, index) => {
+        return (
+          <Message error
+                   content={error.msg}
+                   key={index + " " + error.msg}/>
+        );
+      });
+      this.setState({error: errorComponents});
+    } else {
+      this.setState({error: [<Message error content={error.message}/>]});
+    }
   }
 
   onDropdownChange(event, {value}) {
     this.setState({interval: value});
+  }
+
+  createTrackingVisual({dailyData, quoteData, symbol}, index) {
+    return (
+      <Grid.Row columns={1}
+                key={`${symbol} ${index}`}>
+        <Grid.Column>
+          <StockVisual data={quoteData}
+                       plotData={dailyData}/>
+        </Grid.Column>
+      </Grid.Row>
+    );
+  }
+
+  addStock(event, data) {
+    this.service.addTrack(this.state.symbol, this.state.interval)
+      .catch(this.handleServerError)
   }
 
   render() {
@@ -114,20 +180,18 @@ class StockTracker extends Component {
                        labelPosition="left"
                        fluid/>
               </Segment>
+              
+              <StockVisual data={this.state.data}
+                           plotData={this.state.plotData}
+                           showAdd
+                           onAddClick={this.addStock}/>
 
               <StockErrorFeed errors={errors}/>
             </Segment.Group>
           </Grid.Column>
         </Grid.Row>
         
-        <Grid.Row columns={1}>
-          <Grid.Column>
-            <Segment.Group horizontal>
-              <StockStats data={this.state.data}/>
-              <StockPlot plotData={this.state.plotData}/>
-            </Segment.Group>
-          </Grid.Column>
-        </Grid.Row>
+        {this.state.trackings.map(this.createTrackingVisual)}
       </Grid> 
     );
   }
