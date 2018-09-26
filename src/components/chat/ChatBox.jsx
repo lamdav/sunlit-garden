@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import ReactDOM from "react-dom";
-import { Message, Sidebar, Card, Input, Header } from "semantic-ui-react";
+import { Visibility, Sidebar, Card, Input, Header } from "semantic-ui-react";
 import io from "socket.io-client"
 
 import ChatService from "./ChatService";
@@ -11,10 +11,10 @@ class ChatBox extends Component {
 
     this.state = {
       message: "",
-      messages: []
+      messages: [],
+      inputRef: null
     };
 
-    this.inputRef = null;
     this.socket = null
     this.service = new ChatService();
 
@@ -47,13 +47,13 @@ class ChatBox extends Component {
     }
   }
 
-  setInputRef(ref) {
-    this.inputRef = ref;
+  setInputRef(inputRef) {
+    this.setState({inputRef});
   }
 
   scrollInputIntoView() {
-    if (this.inputRef) {
-      const inputNode = ReactDOM.findDOMNode(this.inputRef);
+    if (this.state.inputRef) {
+      const inputNode = ReactDOM.findDOMNode(this.state.inputRef);
       inputNode.scrollIntoView();
     } else {
       console.log("input ref was not initialized :(");
@@ -65,7 +65,8 @@ class ChatBox extends Component {
       <Card key={`${index} ${message.timestamp}`}
             header={message.author}
             meta={new Date(message.timestamp).toTimeString()}
-            description={message.data}/>
+            description={message.data}
+            fluid/>
     );
   }
 
@@ -106,22 +107,31 @@ class ChatBox extends Component {
   render() {
     return (
       <Sidebar as={Card}
-               animation="push"
+               animation="overlay"
                visible={this.props.visible}
-               direction="right"
+               direction="left"
                width="very wide">
 
-        <Card.Header as={Header}
-                     style={{marginTop: "10px"}}
-                     textAlign="center"
-                     content="Major Key Chat Room"/>
-        <Card.Content>
+        <Visibility onUpdate={() => console.log("hello world")}
+                    onBottomVisible={() => console.log("hello world")}
+                    onPassing={() => console.log("passing")}
+                    once={false}
+                    continuous={true}
+                    style={{width: "100%"}}>
+          <Card.Header as={Header}
+                      style={{marginTop: "10px", marginBottom: "10px"}}
+                      textAlign="center"
+                      content="Major Key Chat Room"/>
+        </Visibility>
+
+        <Card.Content>       
           <Card.Description>
             <Card.Group>
-              {this.state.messages.map(this.makeMessage)}
+                  {this.state.messages.map(this.makeMessage)}
             </Card.Group>
           </Card.Description>
         </Card.Content>
+
         <Card.Content extra>
           <Input placeholder="Type a message..."
                  fluid

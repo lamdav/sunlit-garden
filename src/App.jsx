@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import StockTracker from "./components/stocks/StockTracker";
-import { Sidebar, Menu, Segment } from "semantic-ui-react";
+import { Sidebar, Menu } from "semantic-ui-react";
 import ChatBox from "./components/chat/ChatBox";
 
 class App extends Component {
@@ -38,6 +38,8 @@ class App extends Component {
         <ChatBox visible={this.state.sidebarVisible}/>
         
         <Menu borderless
+              inverted
+              fixed="top"
               style={menuStyle}>
           <Menu.Item position="left"
                      index={0}
