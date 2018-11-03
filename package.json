@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@firebase/app-types": "^0.3.2",
+    "@octokit/rest": "^15.15.1",
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "compression": "^1.7.3",
