@@ -12,6 +12,7 @@ const firebase = require("firebase");
 const pThrottle = require("p-throttle");
 const socket = require("socket.io");
 const http = require("http");
+const octokit = require("@octokit/rest")();
 
 firebase.initializeApp({
     apiKey: process.env.FIREBASE_API_KEY,
@@ -24,6 +25,12 @@ firebase.initializeApp({
 const db = firebase.firestore();
 db.settings({
   timestampsInSnapshots: true
+});
+
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+octokit.authenticate({
+  type: "oauth",
+  token: GITHUB_TOKEN
 });
 
 const app = express();
@@ -86,7 +93,7 @@ app.get("/stock/basic", symbolValidations, (request, response) => {
   };
   const params = Object.assign(baseParams, queryParams);
   const config = {params};
-  
+
   stockServiceThrottle(config)
     .then((stockResponse) => {
       response.status(stockResponse.status)
@@ -103,7 +110,7 @@ const intervalValidations = [
     .withMessage("Interval is not a String")
     .not().isEmpty()
     .withMessage("Interval was empty")
-    .custom((interval) => validIntervals.includes(interval))
+    .isIn(validIntervals)
     .withMessage(`Interval must be one of ${validIntervals}`),
 ];
 app.get("/stock/daily", symbolValidations.concat(intervalValidations), (request, response) => {
@@ -112,7 +119,7 @@ app.get("/stock/daily", symbolValidations.concat(intervalValidations), (request,
     return response.status(404)
       .json({errors: errors.array()});
   }
-  
+
   const symbol = request.query.symbol;
   const interval = request.query.interval;
 
@@ -185,16 +192,16 @@ app.get("/chat/messages", timestampValidation, (request, response) => {
     return response.status(404)
       .json({ errors: errors.array() });
   }
-  
+
   const beforeThisTime = request.query.timestamp;
   db.collection("messages")
-    .where("timestamp", "<=", beforeThisTime)
+    .where("timestamp", "<", beforeThisTime)
     .orderBy("timestamp", "desc")
     .limit(10)
     .get()
     .then((querySnapshot) => querySnapshot.docs.map((queryDocSnapshot) => queryDocSnapshot.data()))
     .then((data) => response.status(200).send(data));
-})
+});
 
 io.on("connection", (sock) => {
   console.log("connection event");
@@ -224,7 +231,43 @@ db.collection("messages")
       }
     });
   });
+
+  const perPageValidation = [
+    query("perPage")
+      .isInt()
+      .optional()
+      .withMessage("perPage query is not an integer"),
+    sanitizeQuery("perPage")
+      .customSanitizer((perPage) => parseInt(perPage))
+  ];
+  app.get("/traffic/views", perPageValidation, (request, response) => {
+    const errors = validationResult(request);
+    if (!errors.isEmpty()) {
+      return response.status(404)
+       .json({ errors: errors.array() });
+    }
   
+    const perPage = request.query.perPage || 10;
+  
+    octokit.repos.getAll({
+      sort: "updated",
+      direction: "desc",
+      per_page: perPage
+    }).then((result) => result.data)
+      .then((data) => {
+        return Promise.all(data.map((datum) => {
+          const repo = datum.name;
+          const owner = datum.owner.login;
+          return octokit.repos.getViews({owner, repo, per: "day"})
+            .then((result) => result.data)
+            .then((data) => { return {repo: repo, views: data.views} });
+        }));
+      })
+      .then((data) => {
+        response.status(200)
+          .send(data.filter((datum) => datum.views.length > 0));
+      });  
+  });
 
 if (process.env.NODE_ENV !== "production") {
   app.use(errorhandler());
