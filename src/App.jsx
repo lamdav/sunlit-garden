@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import StockTracker from "./components/stocks/StockTracker";
 import { Sidebar, Menu } from "semantic-ui-react";
 import ChatBox from "./components/chat/ChatBox";
+import TrafficWatch from "./components/traffic/TrafficWatch";
 
 class App extends Component {
   constructor(props) {
@@ -49,6 +50,7 @@ class App extends Component {
         <Sidebar.Pusher onClick={this.hideChat}
                         style={pusherStyle}>
           <StockTracker/>
+          <TrafficWatch/>
         </Sidebar.Pusher>
       </Sidebar.Pushable>
     );
