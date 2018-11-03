@@ -22,6 +22,9 @@ a way to perhaps centralize IoT data collected from various sources.
   - [ ] Index Image shared (via Tags?)
 - [ ] Filtered Aggregate News Feed ?
 - [ ] Classic Calendar + Weather ?
+- [x] All read-accessible Github repositories traffic
+  - [x] views
+  - [ ] clones ?
 
 ## Q&A
 ### Q: Is this under active development?
