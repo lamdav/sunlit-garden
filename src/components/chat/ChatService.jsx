@@ -3,7 +3,7 @@ import axios from "axios";
 class ChatService {
   constructor() {
     this.service = axios.create({
-      baseURL: "http://localhost:8080"
+      baseURL: "http://localhost:8080/chat"
     });
   }
 
@@ -14,7 +14,7 @@ class ChatService {
       }
     }
 
-    return this.service.get("/chat/messages", config);
+    return this.service.get("/messages", config);
   }
 }
 
