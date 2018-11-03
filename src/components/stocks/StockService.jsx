@@ -3,7 +3,7 @@ import axios from "axios";
 class StockService {
   constructor() {
     this.service = axios.create({
-      baseURL: "http://localhost:8080"
+      baseURL: "http://localhost:8080/stock"
     });
   }
 
@@ -13,7 +13,7 @@ class StockService {
         symbol
       }
     };
-    return this.service.get("/stock/basic", config);
+    return this.service.get("/basic", config);
   }
 
   daily(symbol, interval) {
@@ -23,11 +23,11 @@ class StockService {
         interval
       }
     };
-    return this.service.get("/stock/daily", config);
+    return this.service.get("/daily", config);
   }
 
   track() {
-    return this.service.get("/stock/track");
+    return this.service.get("/track");
   }
 
   addTrack(symbol, interval) {
@@ -38,7 +38,7 @@ class StockService {
       }
     };
     console.log(config);
-    return this.service.post("/stock/track", null, config);
+    return this.service.post("/track", null, config);
   }
 }
 
